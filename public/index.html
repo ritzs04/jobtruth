@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JobTruth: check a job offer before you pay or sign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3f5f8; --surface:#ffffff; --ink:#0f1d33; --muted:#5b6679; --line:#d9dfe8;
+  --navy:#0f1d33; --signal:#0b7a6b; --signal-bg:#dff3ee;
+  --amber:#a85d00; --amber-bg:#fdecd2; --stamp:#b3261e; --stamp-bg:#fbe0dd;
+  --mark:#ffe58a; --focus:#2a5bd7;
+  --head:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0b1220; --surface:#131c2e; --ink:#e8edf6; --muted:#9aa6bb; --line:#26324a;
+  --navy:#e8edf6; --signal:#4fd1b8; --signal-bg:#10332f; --amber:#f5b45a; --amber-bg:#3b2a10;
+  --stamp:#ff8a80; --stamp-bg:#3d1816; --mark:#6b5a12; --focus:#8fb0ff;}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 1rem/1.6 var(--body)}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+/* top bar */
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.brand{font:800 1.3rem var(--head);text-decoration:none;display:flex;align-items:center;gap:8px}
+.brand svg{width:26px;height:26px}
+nav a{margin-left:20px;text-decoration:none;color:var(--muted);font-weight:500;font-size:.95rem}
+nav a:hover{color:var(--ink)}
+@media(max-width:640px){nav a:not(.cta){display:none}}
+.cta{background:var(--navy);color:var(--paper);padding:8px 16px;border-radius:8px;font-weight:600}
+nav a.cta{color:var(--paper)}
+
+/* hero */
+.hero{padding:56px 0 40px}
+.hero .wrap{display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center}
+@media(max-width:860px){.hero .wrap{grid-template-columns:1fr}}
+h1{font:800 clamp(2.1rem,5vw,3.4rem)/1.08 var(--head);letter-spacing:-.02em;margin:0 0 16px}
+.lede{font-size:1.1rem;color:var(--muted);max-width:34em;margin:0 0 24px}
+.btn{display:inline-block;border:0;border-radius:8px;padding:12px 22px;font:600 1rem var(--body);cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--navy);color:var(--paper)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line);margin-left:8px}
+.btn.small{padding:7px 14px;font-size:.88rem}
+.btn:disabled{opacity:.6;cursor:wait}
+
+/* annotated sample message */
+.sample{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 22px 18px;position:relative;box-shadow:0 18px 40px -22px rgba(15,29,51,.35)}
+.sample .meta{display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem;margin-bottom:10px}
+.sample p{margin:0;font-size:1.02rem;line-height:2.1}
+mark{background:var(--mark);color:inherit;padding:2px 3px;border-radius:3px;position:relative}
+mark sup{font:700 .68rem var(--body);color:var(--stamp);background:var(--stamp-bg);border-radius:4px;padding:1px 5px;margin-left:3px;vertical-align:middle}
+.stamp{position:absolute;right:-10px;bottom:-18px;transform:rotate(-6deg);border:3px solid var(--stamp);color:var(--stamp);border-radius:10px;padding:6px 14px;font:800 1.15rem var(--head);background:var(--surface)}
+.stamp small{display:block;font:600 .72rem var(--body)}
+
+/* sections */
+section{padding:44px 0}
+h2{font:700 clamp(1.5rem,3vw,2rem)/1.2 var(--head);letter-spacing:-.01em;margin:0 0 8px}
+.sub{color:var(--muted);margin:0 0 24px;max-width:46em}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+
+/* workspace tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 12px;overflow-x:auto}
+.tab{background:none;border:0;padding:14px 16px;font:600 .95rem var(--body);color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--navy)}
+.pane{padding:22px}
+.pane[hidden]{display:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:860px){.two{grid-template-columns:1fr}}
+label.f{display:block;font-weight:600;margin-bottom:6px}
+textarea{width:100%;min-height:210px;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit;resize:vertical}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.hint{color:var(--muted);font-size:.88rem}
+
+/* result */
+.result{border:1.5px dashed var(--line);border-radius:12px;padding:18px;min-height:260px}
+.empty{color:var(--muted);display:flex;flex-direction:column;justify-content:center;height:100%;min-height:220px}
+.empty b{color:var(--ink);font:700 1.1rem var(--head)}
+.gauge{display:flex;align-items:center;gap:18px;margin-bottom:12px}
+.ring{width:104px;height:104px;flex:none}
+.ring circle{fill:none;stroke-width:10}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:currentColor;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .8s ease}
+.ring text{font:800 28px var(--head);fill:var(--ink);text-anchor:middle}
+.verdict{font:800 1.5rem var(--head)}
+.Safe{color:var(--signal)} .Susp{color:var(--amber)} .Risk{color:var(--stamp)}
+.flags{list-style:none;padding:0;margin:8px 0}
+.flags li{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.chip{flex:none;min-width:46px;text-align:center;border-radius:6px;padding:1px 6px;font-weight:700;font-size:.88rem;height:fit-content}
+.chip.neg{background:var(--stamp-bg);color:var(--stamp)} .chip.pos{background:var(--signal-bg);color:var(--signal)}
+.note{background:var(--paper);border-radius:8px;padding:10px 12px;font-size:.88rem;color:var(--muted);margin-top:10px;word-break:break-word}
+.err{color:var(--stamp);font-weight:600}
+
+/* upload */
+.drop{display:block;border:2px dashed var(--line);border-radius:12px;padding:30px 16px;text-align:center;cursor:pointer;background:var(--paper)}
+.drop:hover,.drop:focus-within{border-color:var(--navy)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:.92rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;word-break:break-all}
+.ok{color:var(--signal);font-weight:700}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);word-break:break-all}
+th{color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+
+/* how scoring works */
+.rules{display:grid;grid-template-columns:repeat(2,1fr);gap:0 40px}
+@media(max-width:760px){.rules{grid-template-columns:1fr}}
+.rule{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}
+.rule span:last-child{font-weight:700;white-space:nowrap}
+.rule .neg{color:var(--stamp)} .rule .pos{color:var(--signal)}
+
+/* security */
+.sec{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+@media(max-width:860px){.sec{grid-template-columns:1fr}}
+.sec h3{font:700 1.1rem var(--head);margin:0 0 6px}
+.sec p{margin:0;color:var(--muted)}
+
+footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);font-size:.88rem}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style></head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="#top" aria-label="JobTruth home">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l11 4v9c0 7-4.6 12.6-11 15C9.6 27.600 5 22 5 15V6z" fill="currentColor"/><path d="M10.500 16l4 4 7.500-8" fill="none" stroke="var(--paper)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    JobTruth</a>
+  <nav><a href="#how">How scoring works</a><a href="#security">Security</a><a class="cta" href="#check" onclick="openTab('tab-offer')">Check an offer</a></nav>
+</div></header>
+
+<main id="top">
+<div class="hero"><div class="wrap">
+  <div>
+    <h1>Check a job offer before you pay, share or sign anything.</h1>
+    <p class="lede">Paste the message a recruiter sent you. JobTruth lists every warning sign it finds, shows how each one changed the score, and never calls a company a scam without evidence.</p>
+    <a class="btn primary" href="#check" onclick="openTab('tab-offer')">Check an offer</a>
+    <a class="btn ghost" href="#how">See what it looks for</a>
+  </div>
+  <div class="sample" role="img" aria-label="Example scam message with warning signs highlighted. Score 0 out of 100, high risk.">
+    <div class="meta"><span>WhatsApp, unknown number</span><span>10:42</span></div>
+    <p>Congratulations! You are selected for a work from home job.
+      <mark>No interview</mark><sup>&minus;15</sup>, <mark>earn Rs 5,000 per day</mark><sup>&minus;15</sup>.
+      Pay a <mark>registration fee of Rs 1,500</mark><sup>&minus;40</sup> to confirm your seat. <mark>Urgent</mark><sup>&minus;10</sup>, only today.
+      Mail your CV to <mark>hr.careers@gmail.com</mark><sup>&minus;20</sup></p>
+    <div class="stamp">0 / 100<small>High risk</small></div>
+  </div>
+</div></div>
+
+<section id="check" style="padding-top:20px"><div class="wrap">
+  <h2>Check it yourself</h2>
+  <p class="sub">Four tools, one workspace. Nothing you paste is stored. Uploaded letters go to a private, encrypted bucket.</p>
+  <div class="panel">
+    <div class="tabs" role="tablist" aria-label="Tools">
+      <button class="tab" role="tab" id="tab-offer" aria-selected="true" aria-controls="p-offer">Offer message</button>
+      <button class="tab" role="tab" id="tab-head" aria-selected="false" aria-controls="p-head">Email headers</button>
+      <button class="tab" role="tab" id="tab-up" aria-selected="false" aria-controls="p-up">Offer letter file</button>
+      <button class="tab" role="tab" id="tab-store" aria-selected="false" aria-controls="p-store">Stored files</button>
+    </div>
+
+    <div class="pane" id="p-offer" role="tabpanel" aria-labelledby="tab-offer"><div class="two">
+      <div>
+        <label class="f" for="t">Recruiter message or offer text</label>
+        <textarea id="t" placeholder="Paste the job post, email or WhatsApp message here"></textarea>
+        <div class="row">
+          <button class="btn primary" id="b-an" onclick="analyze()">Analyze offer</button>
+          <button class="btn ghost small" style="margin-left:0" onclick="fillScam()">Try a scam example</button>
+          <button class="btn ghost small" style="margin-left:0" onclick="fillGood()">Try a genuine example</button>
+        </div>
+      </div>
+      <div class="result" id="out1" aria-live="polite"><div class="empty"><b>Your result appears here</b>Paste a message and select Analyze offer, or try one of the examples.</div></div>
+    </div></div>
+
+    <div class="pane" id="p-head" role="tabpanel" aria-labelledby="tab-head" hidden><div class="two">
+      <div>
+        <label class="f" for="h">Raw email headers</label>
+        <textarea id="h" placeholder="In Gmail: open the email, then More (three dots), then Show original. Paste the header block here."></textarea>
+        <div class="row">
+          <button class="btn primary" onclick="headers()">Check sender</button>
+          <button class="btn ghost small" style="margin-left:0" onclick="fillHeaders()">Try an example</button>
+        </div>
+        <p class="hint">A real company email passes SPF, DKIM and DMARC. A failure means the sender may be pretending to be someone else.</p>
+      </div>
+      <div class="result" id="out3" aria-live="polite"><div class="empty"><b>Sender check appears here</b>You will see whether SPF, DKIM and DMARC passed.</div></div>
+    </div></div>
+
+    <div class="pane" id="p-up" role="tabpanel" aria-labelledby="tab-up" hidden><div class="two">
+      <div>
+        <label class="drop" for="f"><b id="fname">Choose an offer letter</b><br><span class="hint">PDF, PNG or JPG, up to 2 MB</span><input type="file" id="f" accept=".pdf,.png,.jpg,.jpeg" onchange="document.getElementById('fname').textContent=this.files[0]?this.files[0].name:'Choose an offer letter'"></label>
+        <div class="row"><button class="btn primary" id="b-up" onclick="upload()">Upload securely</button></div>
+        <p class="hint">The file type is checked from its contents, not its name. It is stored encrypted, with a SHA-256 fingerprint that S3 verifies.</p>
+      </div>
+      <div class="result" id="out2" aria-live="polite"><div class="empty"><b>Upload receipt appears here</b>You will see the encryption, integrity check and a download link that expires in 5 minutes.</div></div>
+    </div></div>
+
+    <div class="pane" id="p-store" role="tabpanel" aria-labelledby="tab-store" hidden>
+      <div class="row" style="margin-top:0"><button class="btn primary small" onclick="listObjs()">List uploaded files</button><button class="btn ghost small" style="margin-left:0" onclick="listVers()">Show all versions</button></div>
+      <div id="out4" class="tablewrap" style="margin-top:14px" aria-live="polite"><p class="hint">Files you upload are listed here. Deleting a file only adds a delete marker, so it can be recovered from the versions list.</p></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <h2>What JobTruth looks for</h2>
+  <p class="sub">The score starts at 100. Each warning sign subtracts points and each reassuring sign adds some. You always see the reasons, never just a number. Score 70 or more looks safe, 40 to 69 is suspicious, below 40 is high risk.</p>
+  <div class="rules">
+    <div class="rule"><span>Asks for a registration, security or training fee</span><span class="neg">&minus;40</span></div>
+    <div class="rule"><span>UPI ID or bank details mentioned</span><span class="neg">&minus;25</span></div>
+    <div class="rule"><span>Personal email such as Gmail or Yahoo</span><span class="neg">&minus;20</span></div>
+    <div class="rule"><span>Only reachable on WhatsApp or Telegram</span><span class="neg">&minus;15</span></div>
+    <div class="rule"><span>Job promised with no interview</span><span class="neg">&minus;15</span></div>
+    <div class="rule"><span>Salary too high for a fresher</span><span class="neg">&minus;15</span></div>
+    <div class="rule"><span>Lookalike domain, such as infosys-careers.com</span><span class="neg">&minus;15</span></div>
+    <div class="rule"><span>Pressure and urgency words</span><span class="neg">&minus;10</span></div>
+    <div class="rule"><span>Email from a known official company domain</span><span class="pos">+10</span></div>
+    <div class="rule"><span>Own domain (still check its age and website)</span><span class="pos">+5</span></div>
+  </div>
+</div></section>
+
+<section id="security" style="padding-bottom:20px"><div class="wrap">
+  <h2>How your offer letter is protected</h2>
+  <p class="sub">Offer letters contain your name, phone number and salary, so they are treated as private documents.</p>
+  <div class="sec">
+    <div><h3>Private and encrypted</h3><p>The bucket blocks all public access, encrypts every file at rest, and refuses any connection that is not HTTPS.</p></div>
+    <div><h3>Tamper-evident</h3><p>A SHA-256 fingerprint is sent with each file and verified by S3. Versioning keeps earlier copies if a file is overwritten or deleted.</p></div>
+    <div><h3>Short-lived access</h3><p>The server uses a role with the minimum permissions and no stored keys. Download links expire after 5 minutes, and files are deleted after 30 days.</p></div>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">JobTruth shows risk indicators, not proof. Always verify a company on its official website and never pay money to get a job. Built for the CAT II Cloud Computing project: Render (PaaS), AWS EC2 (IaaS) and Amazon S3.</div></footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cls=l=>(l==='Looks Safe'||l==='Authenticated')?'Safe':(l==='Suspicious'||l==='Unverifiable')?'Susp':'Risk';
+
+/* tabs */
+const tabs=[...document.querySelectorAll('.tab')];
+function openTab(id){tabs.forEach(t=>{const on=t.id===id;t.setAttribute('aria-selected',on);$(t.getAttribute('aria-controls')).hidden=!on;});}
+tabs.forEach(t=>t.addEventListener('click',()=>openTab(t.id)));
+
+async function call(url,opts){
+  const r=await fetch(url,opts);let d;
+  try{d=await r.json();}catch(e){d={};}
+  if(!r.ok) throw new Error(typeof d.detail==='string'?d.detail:(r.statusText||'Request failed'));
+  return d;
+}
+const busy=(id,on)=>{const b=$(id);if(b)b.disabled=on;};
+const fail=(el,e)=>{el.innerHTML=`<p class="err">${esc(e.message)}</p>`;};
+
+/* examples */
+function fillScam(){$('t').value="URGENT: You are selected for a work from home data entry job. Earn Rs 5,000 per day. No interview needed. Pay Rs 1,500 registration fee to UPI id hrdesk@ybl and send the screenshot on WhatsApp. Contact: careers.hr@gmail.com";analyze();}
+function fillGood(){$('t').value="Hi, thank you for applying for the Systems Engineer role at Infosys. Your online assessment is on 12 November, followed by a technical and an HR interview. Details will come from careers@infosys.com. You never need to pay anyone during this process.";analyze();}
+function fillHeaders(){$('h').value="Authentication-Results: mx.google.com;\n dkim=fail header.i=@infosys-careers.xyz;\n spf=softfail smtp.mailfrom=hr@infosys-careers.xyz;\n dmarc=fail header.from=infosys-careers.xyz";headers();}
+
+/* offer analysis */
+const flagList=fl=>fl.length?`<ul class="flags">${fl.map(f=>`<li><span class="chip ${f.impact>0?'pos':'neg'}">${f.impact>0?'+':'\u2212'}${Math.abs(f.impact)}</span><span>${esc(f.reason)}</span></li>`).join('')}</ul>`:'<p>No warning signs found in this text. Still verify the company on its official website.</p>';
+function ring(score,c){const C=2*Math.PI*45;return `<svg class="ring ${c}" viewBox="0 0 104 104" role="img" aria-label="Trust score ${score} out of 100"><circle class="bg" cx="52" cy="52" r="45"/><circle class="fg" cx="52" cy="52" r="45" stroke-dasharray="${C}" stroke-dashoffset="${C}" data-t="${C*(1-score/100)}"/><text x="52" y="62">${score}</text></svg>`;}
+function animateRings(el){requestAnimationFrame(()=>requestAnimationFrame(()=>el.querySelectorAll('.fg').forEach(c=>c.style.strokeDashoffset=c.dataset.t)));}
+async function analyze(){
+  const o=$('out1');busy('b-an',true);
+  try{const d=await call('/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:$('t').value})});
+    const c=cls(d.label);
+    o.innerHTML=`<div class="gauge">${ring(d.trust_score,c)}<div><div class="verdict ${c}">${esc(d.label)}</div><div class="hint">Trust score out of 100</div></div></div>
+      ${flagList(d.flags)}
+      <div class="note"><b>What was checked (personal details hidden):</b><br>${esc(d.redacted_preview)}</div>
+      <p class="hint" style="margin-bottom:0">${esc(d.disclaimer)} Served by ${esc(d.served_by)}.</p>`;
+    animateRings(o);
+  }catch(e){fail(o,e);}finally{busy('b-an',false);}
+}
+
+/* headers */
+async function headers(){
+  const o=$('out3');
+  try{const d=await call('/headers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raw_headers:$('h').value})});
+    const c=cls(d.verdict);
+    const chips=Object.entries(d.results).map(([k,v])=>`<span class="chip ${v==='pass'?'pos':'neg'}" style="margin-right:6px">${esc(k.toUpperCase())}: ${esc(v)}</span>`).join('');
+    o.innerHTML=`<div class="verdict ${c}" style="margin-bottom:8px">${esc(d.verdict)}</div><div style="margin-bottom:10px">${chips}</div>${flagList(d.flags)}<p class="hint" style="margin-bottom:0">${esc(d.disclaimer)}</p>`;
+  }catch(e){fail(o,e);}
+}
+
+/* upload */
+async function upload(){
+  const o=$('out2'),file=$('f').files[0];
+  if(!file){o.innerHTML='<p class="err">Choose a PDF, PNG or JPG file first.</p>';return;}
+  const fd=new FormData();fd.append('file',file);busy('b-up',true);
+  try{const d=await call('/upload',{method:'POST',body:fd});
+    const safeUrl=/^https:\/\//.test(d.temp_download_url)?d.temp_download_url:'#';
+    o.innerHTML=`<div class="verdict ${d.integrity_verified?'Safe':'Risk'}" style="margin-bottom:10px">${d.integrity_verified?'Stored and verified':'Integrity check failed'}</div>
+      <dl class="kv">
+        <dt>Encryption</dt><dd class="ok">${esc(d.encryption||'none')}</dd>
+        <dt>Integrity</dt><dd class="${d.integrity_verified?'ok':'err'}">${d.integrity_verified?'SHA-256 matches':'Mismatch'}</dd>
+        <dt>SHA-256</dt><dd>${esc(d.sha256_hex)}</dd>
+        <dt>Object key</dt><dd>${esc(d.key)}</dd>
+        <dt>Version ID</dt><dd>${esc(d.version_id||'-')}</dd>
+        <dt>Private link</dt><dd><a href="${esc(safeUrl)}" target="_blank" rel="noopener">Open (expires in ${esc(d.url_expires_in_seconds)} seconds)</a></dd>
+      </dl>`;
+  }catch(e){o.innerHTML=`<p class="err">Upload rejected: ${esc(e.message)}</p>`;}finally{busy('b-up',false);}
+}
+
+/* storage */
+async function listObjs(){
+  const o=$('out4');
+  try{const d=await call('/objects');
+    o.innerHTML=d.length?`<table><thead><tr><th>File</th><th>Size</th><th>Uploaded</th><th></th></tr></thead><tbody>${d.map(x=>
+      `<tr><td>${esc(x.key)}</td><td>${(x.size/1024).toFixed(1)} KB</td><td>${esc(x.last_modified.replace('T',' ').slice(0,16))}</td><td><button class="btn ghost small" style="margin:0" data-k="${esc(x.key)}" onclick="del(this.dataset.k)">Delete</button></td></tr>`).join('')}</tbody></table>`:'<p class="hint">No files stored yet. Upload an offer letter first.</p>';
+  }catch(e){fail(o,e);}
+}
+async function del(k){
+  if(!confirm('Delete '+k+'? The bucket is versioned, so it can be recovered.'))return;
+  try{await call('/objects/'+k,{method:'DELETE'});}catch(e){alert(e.message);}
+  listObjs();
+}
+async function listVers(){
+  const o=$('out4');
+  try{const d=await call('/versions');
+    o.innerHTML=d.length?`<table><thead><tr><th>File</th><th>Type</th><th>Current</th><th>Version ID</th></tr></thead><tbody>${d.map(x=>
+      `<tr><td>${esc(x.key)}</td><td>${esc(x.type)}</td><td>${x.is_latest?'yes':'no'}</td><td>${esc(x.version_id)}</td></tr>`).join('')}</tbody></table>`:'<p class="hint">No versions yet.</p>';
+  }catch(e){fail(o,e);}
+}
+</script>
+</body></html>
