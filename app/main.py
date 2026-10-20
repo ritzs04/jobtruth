@@ -6,7 +6,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, status, Depends
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import storage, auth, db
+from app import storage, auth, db, verify
 from app.pii import redact
 from app.rules import analyze, analyze_headers
 
@@ -20,6 +20,16 @@ class TextReq(BaseModel):
 
 class HeaderReq(BaseModel):
     raw_headers: str = Field(min_length=1, max_length=20000)
+
+
+class ScamReportReq(BaseModel):
+    domain: str = Field(min_length=1, max_length=255)
+    company_name: str = Field(min_length=1, max_length=255)
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+class CompanyLookupReq(BaseModel):
+    company_name: str = Field(min_length=1, max_length=255)
 
 
 @app.post("/register")
@@ -98,5 +108,31 @@ def health():
     return {"status": "ok", "served_by": socket.gethostname()}
 
 
+@app.post("/report-scam")
+def report_scam(req: ScamReportReq, user: dict = Depends(auth.get_current_user)):
+    db.report_scam(req.domain, req.company_name, req.reason, user["email"])
+    return {"status": "reported", "message": "Thank you for reporting this scam"}
+
+
+@app.get("/scams")
+def get_scams():
+    return db.get_top_scams(50)
+
+
+@app.post("/verify-company")
+def verify_company(req: CompanyLookupReq):
+    result = verify.verify_company(req.company_name)
+    scam_count = db.get_scam_count(req.company_name)
+    result["scam_reports"] = scam_count
+    return result
+
+
+@app.post("/benchmark-salary")
+def benchmark_salary(req: TextReq):
+    result = verify.benchmark_salary(req.text)
+    return result
+
+
 # keep last: the static mount captures every unmatched path
 app.mount("/", StaticFiles(directory=STATIC, html=True), name="public")
+

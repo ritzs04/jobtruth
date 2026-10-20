@@ -178,10 +178,12 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
   <div class="panel">
     <div class="tabs" role="tablist" aria-label="Tools">
       <button class="tab" role="tab" id="tab-offer" aria-selected="true" aria-controls="p-offer">Offer message</button>
+      <button class="tab" role="tab" id="tab-verify" aria-selected="false" aria-controls="p-verify">Verify company</button>
       <button class="tab" role="tab" id="tab-head" aria-selected="false" aria-controls="p-head">Email headers</button>
       <button class="tab" role="tab" id="tab-up" aria-selected="false" aria-controls="p-up">Offer letter file</button>
       <button class="tab" role="tab" id="tab-store" aria-selected="false" aria-controls="p-store">Stored files</button>
       <button class="tab" role="tab" id="tab-history" aria-selected="false" aria-controls="p-history">My analyses</button>
+      <button class="tab" role="tab" id="tab-scams" aria-selected="false" aria-controls="p-scams">Known scams</button>
     </div>
 
     <div class="pane" id="p-offer" role="tabpanel" aria-labelledby="tab-offer"><div class="two">
@@ -195,6 +197,19 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
         </div>
       </div>
       <div class="result" id="out1" aria-live="polite"><div class="empty"><b>Your result appears here</b>Paste a message and select Analyze offer, or try one of the examples.</div></div>
+    </div></div>
+
+    <div class="pane" id="p-verify" role="tabpanel" aria-labelledby="tab-verify" hidden><div class="two">
+      <div>
+        <label class="f" for="c">Company name</label>
+        <input type="text" id="c" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box" placeholder="e.g., TCS, Infosys, or unknown company">
+        <div class="row">
+          <button class="btn primary" onclick="verifyCompany()">Verify company</button>
+          <button class="btn ghost small" style="margin-left:0" onclick="$('c').value='TCS';verifyCompany()">Try TCS</button>
+          <button class="btn ghost small" style="margin-left:0" onclick="$('c').value='FakeCorpXYZ';verifyCompany()">Try fake</button>
+        </div>
+      </div>
+      <div class="result" id="out-verify" aria-live="polite"><div class="empty"><b>Company info appears here</b>Enter a company name and click Verify company.</div></div>
     </div></div>
 
     <div class="pane" id="p-head" role="tabpanel" aria-labelledby="tab-head" hidden><div class="two">
@@ -226,6 +241,11 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
 
     <div class="pane" id="p-history" role="tabpanel" aria-labelledby="tab-history" hidden>
       <div id="out5" class="tablewrap" aria-live="polite"><p class="hint">Your saved analyses appear here. Log in to save your checks.</p></div>
+    </div>
+
+    <div class="pane" id="p-scams" role="tabpanel" aria-labelledby="tab-scams" hidden>
+      <div class="row" style="margin-top:0"><button class="btn primary small" onclick="loadScams()">Load known scams</button></div>
+      <div id="out-scams" class="tablewrap" style="margin-top:14px" aria-live="polite"><p class="hint">Most reported scam domains appear here. Help others by reporting suspicious offers.</p></div>
     </div>
   </div>
 </div></section>
@@ -382,3 +402,45 @@ async function loadMyAnalyses(){
 }
 </script>
 </body></html>
+
+async function verifyCompany(){
+  const o=$('out-verify'),name=$('c').value;
+  if(!name){o.innerHTML='<p class="err">Enter a company name</p>';return;}
+  try{const d=await call('/verify-company',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_name:name})});
+    const status=d.is_real?'Verified':'Not verified';
+    const scamWarn=d.scam_reports>0?`<p style="color:var(--stamp);font-weight:600">Warning: This company has ${d.scam_reports} scam report(s)</p>`:
+      `<p style="color:var(--signal);font-weight:600">No scam reports for this company</p>`;
+    o.innerHTML=`<div style="margin-bottom:16px">
+      <div class="verdict ${d.is_real?'Safe':'Risk'}" style="margin-bottom:8px">${esc(status)}</div>
+      <dl class="kv">
+        <dt>Company</dt><dd>${esc(name)}</dd>
+        <dt>Website</dt><dd>${d.website?`<a href="https://${esc(d.website)}" target="_blank">${esc(d.website)}</a>`:'Not found'}</dd>
+        <dt>Founded</dt><dd>${d.founded_year||'Unknown'}</dd>
+        <dt>Reason</dt><dd>${esc(d.reason)}</dd>
+      </dl>
+      ${scamWarn}
+      ${authToken?`<button class="btn ghost small" style="margin-top:10px" onclick="reportScamModal('${esc(name)}')">Report as scam</button>`:''}
+    </div>`;
+  }catch(e){fail(o,e);}
+}
+
+async function loadScams(){
+  const o=$('out-scams');
+  try{const d=await call('/scams');
+    o.innerHTML=d.length?`<table><thead><tr><th>Domain</th><th>Company</th><th>Reports</th></tr></thead><tbody>${d.map(x=>
+      `<tr><td>${esc(x.domain)}</td><td>${esc(x.company_name||'-')}</td><td>${x.count}</td></tr>`).join('')}</tbody></table>`:'<p class="hint">No scams reported yet. Help the community by reporting suspicious offers.</p>';
+  }catch(e){fail(o,e);}
+}
+
+function reportScamModal(domain){
+  const reason=prompt('Why do you think this is a scam? (brief reason)');
+  if(!reason)return;
+  reportScam(domain,reason);
+}
+
+async function reportScam(domain,reason){
+  try{
+    await call('/report-scam',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain,company_name:$('c').value,reason})});
+    alert('Thank you for reporting this scam. It helps protect others.');
+  }catch(e){alert('Error: '+e.message);}
+}
