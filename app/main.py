@@ -1,11 +1,12 @@
 import socket
+import json
 from pathlib import Path
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException, status, Depends
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import storage
+from app import storage, auth, db
 from app.pii import redact
 from app.rules import analyze, analyze_headers
 
@@ -21,12 +22,47 @@ class HeaderReq(BaseModel):
     raw_headers: str = Field(min_length=1, max_length=20000)
 
 
+@app.post("/register")
+def register(req: auth.UserRegister):
+    if len(req.password) < 6:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be at least 6 characters")
+    hashed = auth.hash_password(req.password)
+    user_id = db.create_user(req.email, hashed)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+    token = auth.create_access_token(req.email)
+    return {"access_token": token, "token_type": "bearer", "email": req.email}
+
+
+@app.post("/login")
+def login(req: auth.UserLogin):
+    user = db.get_user_by_email(req.email)
+    if not user or not auth.verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+    token = auth.create_access_token(req.email)
+    return {"access_token": token, "token_type": "bearer", "email": req.email}
+
+
 @app.post("/analyze")
 def run_analyze(req: TextReq):
     result = analyze(req.text)
     result["redacted_preview"] = redact(req.text)[:300]
     result["served_by"] = socket.gethostname()
     return result
+
+
+@app.post("/analyze-save")
+def analyze_and_save(req: TextReq, user: dict = Depends(auth.get_current_user)):
+    result = analyze(req.text)
+    result["redacted_preview"] = redact(req.text)[:300]
+    result["served_by"] = socket.gethostname()
+    db.save_analysis(user["id"], req.text, result["trust_score"], result["label"], json.dumps(result["flags"]))
+    return result
+
+
+@app.get("/my-analyses")
+def my_analyses(user: dict = Depends(auth.get_current_user)):
+    return db.get_user_analyses(user["id"])
 
 
 @app.post("/headers")

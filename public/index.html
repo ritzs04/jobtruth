@@ -131,8 +131,28 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
   <a class="brand" href="#top" aria-label="JobTruth home">
     <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l11 4v9c0 7-4.6 12.6-11 15C9.6 27.600 5 22 5 15V6z" fill="currentColor"/><path d="M10.500 16l4 4 7.500-8" fill="none" stroke="var(--paper)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     JobTruth</a>
-  <nav><a href="#how">How scoring works</a><a href="#security">Security</a><a class="cta" href="#check" onclick="openTab('tab-offer')">Check an offer</a></nav>
+  <nav><a href="#how">How scoring works</a><a href="#security">Security</a><span id="auth-nav"><a class="cta" href="#" onclick="openAuthModal('login');return false">Log in</a></span></nav>
 </div></header>
+
+<div id="auth-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10;display:none;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:14px;padding:32px;max-width:400px;width:90%">
+    <h2 style="margin:0 0 20px;font-size:1.5rem">Log in or Sign up</h2>
+    <div style="margin-bottom:16px">
+      <label class="f" for="auth-email">Email</label>
+      <input type="email" id="auth-email" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box" placeholder="your@email.com">
+    </div>
+    <div style="margin-bottom:20px">
+      <label class="f" for="auth-pass">Password</label>
+      <input type="password" id="auth-pass" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box" placeholder="At least 6 characters">
+    </div>
+    <div id="auth-error" style="color:var(--stamp);margin-bottom:16px;display:none"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" style="flex:1" id="auth-btn" onclick="authSubmit()">Log in</button>
+      <button class="btn ghost" style="flex:1" onclick="toggleAuthMode()">Sign up</button>
+      <button class="btn ghost" style="flex:1" onclick="closeAuthModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <main id="top">
 <div class="hero"><div class="wrap">
@@ -161,6 +181,7 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
       <button class="tab" role="tab" id="tab-head" aria-selected="false" aria-controls="p-head">Email headers</button>
       <button class="tab" role="tab" id="tab-up" aria-selected="false" aria-controls="p-up">Offer letter file</button>
       <button class="tab" role="tab" id="tab-store" aria-selected="false" aria-controls="p-store">Stored files</button>
+      <button class="tab" role="tab" id="tab-history" aria-selected="false" aria-controls="p-history">My analyses</button>
     </div>
 
     <div class="pane" id="p-offer" role="tabpanel" aria-labelledby="tab-offer"><div class="two">
@@ -202,6 +223,10 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
       <div class="row" style="margin-top:0"><button class="btn primary small" onclick="listObjs()">List uploaded files</button><button class="btn ghost small" style="margin-left:0" onclick="listVers()">Show all versions</button></div>
       <div id="out4" class="tablewrap" style="margin-top:14px" aria-live="polite"><p class="hint">Files you upload are listed here. Deleting a file only adds a delete marker, so it can be recovered from the versions list.</p></div>
     </div>
+
+    <div class="pane" id="p-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+      <div id="out5" class="tablewrap" aria-live="polite"><p class="hint">Your saved analyses appear here. Log in to save your checks.</p></div>
+    </div>
   </div>
 </div></section>
 
@@ -240,12 +265,43 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cls=l=>(l==='Looks Safe'||l==='Authenticated')?'Safe':(l==='Suspicious'||l==='Unverifiable')?'Susp':'Risk';
 
+let authMode='login';let authToken=localStorage.getItem('jobtruth_token');
+if(authToken)updateAuthUI();
+
+function openAuthModal(mode){authMode=mode;$('auth-modal').style.display='flex';$('auth-btn').textContent=mode==='login'?'Log in':'Sign up';$('auth-email').focus();}
+function closeAuthModal(){$('auth-modal').style.display='none';$('auth-error').style.display='none';}
+function toggleAuthMode(){authMode=authMode==='login'?'signup':'login';$('auth-btn').textContent=authMode==='login'?'Log in':'Sign up';}
+async function authSubmit(){
+  const email=$('auth-email').value,pass=$('auth-pass').value,err=$('auth-error');
+  if(!email||!pass){err.textContent='Email and password required';err.style.display='block';return;}
+  try{
+    const d=await call(`/${authMode==='login'?'login':'register'}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    authToken=d.access_token;localStorage.setItem('jobtruth_token',authToken);closeAuthModal();updateAuthUI();$('auth-email').value='';$('auth-pass').value='';
+  }catch(e){err.textContent=e.message;err.style.display='block';}
+}
+function logout(){localStorage.removeItem('jobtruth_token');authToken=null;updateAuthUI();}
+function updateAuthUI(){
+  const nav=$('auth-nav');
+  if(authToken){
+    nav.innerHTML='<a class="cta" href="#" onclick="openTab(\'tab-history\');return false" style="margin-right:8px">My analyses</a><a href="#" onclick="logout();return false" style="color:var(--muted)">Log out</a>';
+  }else{
+    nav.innerHTML='<a class="cta" href="#" onclick="openAuthModal(\'login\');return false">Log in</a>';
+  }
+}
+
 /* tabs */
 const tabs=[...document.querySelectorAll('.tab')];
-function openTab(id){tabs.forEach(t=>{const on=t.id===id;t.setAttribute('aria-selected',on);$(t.getAttribute('aria-controls')).hidden=!on;});}
+function openTab(id){
+  if(id==='tab-history'&&!authToken){openAuthModal('login');return;}
+  tabs.forEach(t=>{const on=t.id===id;t.setAttribute('aria-selected',on);$(t.getAttribute('aria-controls')).hidden=!on;});
+  if(id==='tab-history')loadMyAnalyses();
+}
 tabs.forEach(t=>t.addEventListener('click',()=>openTab(t.id)));
 
 async function call(url,opts){
+  if(!opts)opts={};
+  if(authToken&&!opts.headers)opts.headers={};
+  if(authToken)opts.headers.Authorization=`Bearer ${authToken}`;
   const r=await fetch(url,opts);let d;
   try{d=await r.json();}catch(e){d={};}
   if(!r.ok) throw new Error(typeof d.detail==='string'?d.detail:(r.statusText||'Request failed'));
@@ -317,11 +373,11 @@ async function del(k){
   try{await call('/objects/'+k,{method:'DELETE'});}catch(e){alert(e.message);}
   listObjs();
 }
-async function listVers(){
-  const o=$('out4');
-  try{const d=await call('/versions');
-    o.innerHTML=d.length?`<table><thead><tr><th>File</th><th>Type</th><th>Current</th><th>Version ID</th></tr></thead><tbody>${d.map(x=>
-      `<tr><td>${esc(x.key)}</td><td>${esc(x.type)}</td><td>${x.is_latest?'yes':'no'}</td><td>${esc(x.version_id)}</td></tr>`).join('')}</tbody></table>`:'<p class="hint">No versions yet.</p>';
+async function loadMyAnalyses(){
+  const o=$('out5');
+  try{const d=await call('/my-analyses');
+    o.innerHTML=d.length?`<table><thead><tr><th>Date</th><th>Score</th><th>Result</th><th>Preview</th></tr></thead><tbody>${d.map(x=>
+      `<tr><td>${esc(x.created_at.slice(0,10))}</td><td>${x.trust_score}</td><td>${esc(x.label)}</td><td>${esc(x.text.slice(0,50))}...</td></tr>`).join('')}</tbody></table>`:'<p class="hint">No analyses saved yet. Log in and use Analyze offer to save your checks.</p>';
   }catch(e){fail(o,e);}
 }
 </script>
