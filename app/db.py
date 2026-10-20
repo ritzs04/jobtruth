@@ -60,6 +60,16 @@ def init_db():
             updated_at TEXT NOT NULL
         )
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS comparisons (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            analyses_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -214,3 +224,42 @@ def get_salary_benchmark(role: str, location: str, experience_level: str):
 
 
 init_db()
+
+
+def save_comparison(user_id: int, name: str, analyses_json: str):
+    """Save a comparison of multiple analyses."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO comparisons (user_id, name, analyses_json, created_at) VALUES (?, ?, ?, ?)",
+        (user_id, name, analyses_json, datetime.utcnow().isoformat())
+    )
+    conn.commit()
+    comparison_id = c.lastrowid
+    conn.close()
+    return comparison_id
+
+
+def get_user_comparisons(user_id: int, limit: int = 20):
+    """Get all comparisons for a user."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, name, created_at FROM comparisons WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        (user_id, limit)
+    )
+    comparisons = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return comparisons
+
+
+def get_comparison(comparison_id: int):
+    """Get a specific comparison."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT * FROM comparisons WHERE id = ?", (comparison_id,))
+    result = c.fetchone()
+    conn.close()
+    return dict(result) if result else None

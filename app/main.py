@@ -6,7 +6,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, status, Depends
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import storage, auth, db, verify, security, batch
+from app import storage, auth, db, verify, security, batch, pdf
 from app.pii import redact
 from app.rules import analyze, analyze_headers
 from app.i18n import get_text, get_supported_languages
@@ -39,6 +39,11 @@ class DomainCheckReq(BaseModel):
 
 class LanguageReq(BaseModel):
     lang: str = Field(default="en")
+
+
+class ComparisonReq(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    analyses: list = Field(min_items=2, max_items=3)
 
 
 @app.post("/register")
@@ -179,6 +184,33 @@ def get_languages():
 def translate(key: str, lang: str = "en"):
     text = get_text(key, lang)
     return {"key": key, "lang": lang, "text": text}
+
+
+@app.post("/export-pdf")
+def export_pdf(req: TextReq):
+    result = analyze(req.text)
+    pdf_bytes = pdf.generate_pdf_report(result, req.text)
+    return {"pdf_base64": pdf_bytes.hex(), "filename": "jobtruth_report.pdf"}
+
+
+@app.post("/save-comparison")
+def save_comparison(req: ComparisonReq, user: dict = Depends(auth.get_current_user)):
+    comparison_id = db.save_comparison(user["id"], req.name, json.dumps(req.analyses))
+    return {"id": comparison_id, "name": req.name, "message": "Comparison saved"}
+
+
+@app.get("/my-comparisons")
+def my_comparisons(user: dict = Depends(auth.get_current_user)):
+    return db.get_user_comparisons(user["id"])
+
+
+@app.get("/comparison/{comparison_id}")
+def get_comparison(comparison_id: int, user: dict = Depends(auth.get_current_user)):
+    comp = db.get_comparison(comparison_id)
+    if not comp or comp["user_id"] != user["id"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comparison not found")
+    comp["analyses"] = json.loads(comp["analyses_json"])
+    return comp
 
 
 # keep last: the static mount captures every unmatched path

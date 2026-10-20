@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 400px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f3f5f8;
+      color: #0f1d33;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+    .result {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-left: 4px solid #0b7a6b;
+    }
+    .result.risk {
+      border-left-color: #b3261e;
+    }
+    .result.suspicious {
+      border-left-color: #a85d00;
+    }
+    .score {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+    .label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button {
+      background: #0f1d33;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      width: 100%;
+      margin-top: 8px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #5b6679;
+    }
+    .error {
+      background: #fbe0dd;
+      color: #b3261e;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>JobTruth</h1>
+  <div id="content">
+    <div class="loading">Analyzing selected text...</div>
+  </div>
+  <button onclick="openFullApp()">Open JobTruth</button>
+  <script src="popup.js"></script>
+</body>
+</html>

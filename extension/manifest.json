@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "JobTruth",
+  "version": "1.0",
+  "description": "Check job offers for scams directly from Gmail, LinkedIn, and WhatsApp Web",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://www.linkedin.com/*",
+    "https://web.whatsapp.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "JobTruth - Check this offer"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mail.google.com/*",
+        "https://www.linkedin.com/*",
+        "https://web.whatsapp.com/*"
+      ],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "images/icon-16.png",
+    "48": "images/icon-48.png",
+    "128": "images/icon-128.png"
+  }
+}

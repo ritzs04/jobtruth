@@ -8,3 +8,5 @@ pydantic-settings
 whois
 requests
 csv23
+reportlab
+python-dateutil
