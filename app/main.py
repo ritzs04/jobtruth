@@ -6,9 +6,10 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, status, Depends
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import storage, auth, db, verify
+from app import storage, auth, db, verify, security, batch
 from app.pii import redact
 from app.rules import analyze, analyze_headers
+from app.i18n import get_text, get_supported_languages
 
 app = FastAPI(title="JobTruth", description="Fake job and internship offer detector")
 STATIC = Path(__file__).resolve().parent.parent / "public"
@@ -30,6 +31,14 @@ class ScamReportReq(BaseModel):
 
 class CompanyLookupReq(BaseModel):
     company_name: str = Field(min_length=1, max_length=255)
+
+
+class DomainCheckReq(BaseModel):
+    domain: str = Field(min_length=1, max_length=255)
+
+
+class LanguageReq(BaseModel):
+    lang: str = Field(default="en")
 
 
 @app.post("/register")
@@ -131,6 +140,45 @@ def verify_company(req: CompanyLookupReq):
 def benchmark_salary(req: TextReq):
     result = verify.benchmark_salary(req.text)
     return result
+
+
+@app.post("/check-domain-age")
+def check_domain_age(req: DomainCheckReq):
+    result = security.check_domain_age(req.domain)
+    return result
+
+
+@app.post("/check-breach")
+def check_breach(req: TextReq):
+    # Extract email from text
+    import re
+    emails = re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", req.text)
+    if not emails:
+        return {"breached": False, "breaches": [], "flag": None}
+    result = security.check_breach_database(emails[0])
+    return result
+
+
+@app.post("/batch-analyze")
+async def batch_analyze_csv(file: UploadFile = File(...), user: dict = Depends(auth.get_current_user)):
+    content = await file.read()
+    try:
+        rows = batch.parse_csv(content)
+        results = batch.batch_analyze(rows)
+        return {"total": len(rows), "results": results}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@app.get("/languages")
+def get_languages():
+    return {"supported": get_supported_languages()}
+
+
+@app.get("/translate/{key}")
+def translate(key: str, lang: str = "en"):
+    text = get_text(key, lang)
+    return {"key": key, "lang": lang, "text": text}
 
 
 # keep last: the static mount captures every unmatched path
