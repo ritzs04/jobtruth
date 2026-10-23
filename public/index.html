@@ -131,28 +131,8 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
   <a class="brand" href="#top" aria-label="JobTruth home">
     <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l11 4v9c0 7-4.6 12.6-11 15C9.6 27.600 5 22 5 15V6z" fill="currentColor"/><path d="M10.500 16l4 4 7.500-8" fill="none" stroke="var(--paper)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     JobTruth</a>
-  <nav><a href="#how">How scoring works</a><a href="#security">Security</a><span id="auth-nav"><a class="cta" href="#" onclick="openAuthModal('login');return false">Log in</a></span></nav>
+  <nav><a href="#how">How scoring works</a><a href="#security">Security</a><a class="cta" href="#check" onclick="openTab('tab-offer')">Check an offer</a></nav>
 </div></header>
-
-<div id="auth-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10;display:none;align-items:center;justify-content:center">
-  <div style="background:var(--surface);border-radius:14px;padding:32px;max-width:400px;width:90%">
-    <h2 style="margin:0 0 20px;font-size:1.5rem">Log in or Sign up</h2>
-    <div style="margin-bottom:16px">
-      <label class="f" for="auth-email">Email</label>
-      <input type="email" id="auth-email" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box" placeholder="your@email.com">
-    </div>
-    <div style="margin-bottom:20px">
-      <label class="f" for="auth-pass">Password</label>
-      <input type="password" id="auth-pass" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box" placeholder="At least 6 characters">
-    </div>
-    <div id="auth-error" style="color:var(--stamp);margin-bottom:16px;display:none"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn primary" style="flex:1" id="auth-btn" onclick="authSubmit()">Log in</button>
-      <button class="btn ghost" style="flex:1" onclick="toggleAuthMode()">Sign up</button>
-      <button class="btn ghost" style="flex:1" onclick="closeAuthModal()">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <main id="top">
 <div class="hero"><div class="wrap">
@@ -178,14 +158,9 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
   <div class="panel">
     <div class="tabs" role="tablist" aria-label="Tools">
       <button class="tab" role="tab" id="tab-offer" aria-selected="true" aria-controls="p-offer">Offer message</button>
-      <button class="tab" role="tab" id="tab-verify" aria-selected="false" aria-controls="p-verify">Verify company</button>
-      <button class="tab" role="tab" id="tab-domain" aria-selected="false" aria-controls="p-domain">Domain age</button>
-      <button class="tab" role="tab" id="tab-batch" aria-selected="false" aria-controls="p-batch">Batch analysis</button>
       <button class="tab" role="tab" id="tab-head" aria-selected="false" aria-controls="p-head">Email headers</button>
       <button class="tab" role="tab" id="tab-up" aria-selected="false" aria-controls="p-up">Offer letter file</button>
       <button class="tab" role="tab" id="tab-store" aria-selected="false" aria-controls="p-store">Stored files</button>
-      <button class="tab" role="tab" id="tab-history" aria-selected="false" aria-controls="p-history">My analyses</button>
-      <button class="tab" role="tab" id="tab-scams" aria-selected="false" aria-controls="p-scams">Known scams</button>
     </div>
 
     <div class="pane" id="p-offer" role="tabpanel" aria-labelledby="tab-offer"><div class="two">
@@ -199,43 +174,6 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
         </div>
       </div>
       <div class="result" id="out1" aria-live="polite"><div class="empty"><b>Your result appears here</b>Paste a message and select Analyze offer, or try one of the examples.</div></div>
-    </div></div>
-
-    <div class="pane" id="p-verify" role="tabpanel" aria-labelledby="tab-verify" hidden><div class="two">
-      <div>
-        <label class="f" for="c">Company name</label>
-        <input type="text" id="c" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box" placeholder="e.g., TCS, Infosys, or unknown company">
-        <div class="row">
-          <button class="btn primary" onclick="verifyCompany()">Verify company</button>
-          <button class="btn ghost small" style="margin-left:0" onclick="$('c').value='TCS';verifyCompany()">Try TCS</button>
-          <button class="btn ghost small" style="margin-left:0" onclick="$('c').value='FakeCorpXYZ';verifyCompany()">Try fake</button>
-        </div>
-      </div>
-      <div class="result" id="out-verify" aria-live="polite"><div class="empty"><b>Company info appears here</b>Enter a company name and click Verify company.</div></div>
-    </div></div>
-
-    <div class="pane" id="p-domain" role="tabpanel" aria-labelledby="tab-domain" hidden><div class="two">
-      <div>
-        <label class="f" for="d">Domain name</label>
-        <input type="text" id="d" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box" placeholder="e.g., example.com">
-        <div class="row">
-          <button class="btn primary" onclick="checkDomainAge()">Check domain age</button>
-          <button class="btn ghost small" style="margin-left:0" onclick="$('d').value='google.com';checkDomainAge()">Try google.com</button>
-        </div>
-        <p class="hint">Scammers often use newly registered domains. Domains less than 3 months old are a red flag.</p>
-      </div>
-      <div class="result" id="out-domain" aria-live="polite"><div class="empty"><b>Domain age appears here</b>Enter a domain and click Check domain age.</div></div>
-    </div></div>
-
-    <div class="pane" id="p-batch" role="tabpanel" aria-labelledby="tab-batch" hidden><div class="two">
-      <div>
-        <label class="f">Upload CSV file</label>
-        <p class="hint">CSV must have a column named "offer_text" with job offer messages. Download template:</p>
-        <button class="btn ghost small" onclick="downloadCSVTemplate()">Download template</button>
-        <label class="drop" for="csv"><b id="csvname">Choose CSV file</b><br><span class="hint">CSV format, up to 10 MB</span><input type="file" id="csv" accept=".csv" onchange="document.getElementById('csvname').textContent=this.files[0]?this.files[0].name:'Choose CSV file'"></label>
-        <div class="row"><button class="btn primary" id="b-batch" onclick="batchAnalyze()">Analyze all</button></div>
-      </div>
-      <div class="result" id="out-batch" aria-live="polite"><div class="empty"><b>Batch results appear here</b>Upload a CSV and click Analyze all.</div></div>
     </div></div>
 
     <div class="pane" id="p-head" role="tabpanel" aria-labelledby="tab-head" hidden><div class="two">
@@ -263,15 +201,6 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
     <div class="pane" id="p-store" role="tabpanel" aria-labelledby="tab-store" hidden>
       <div class="row" style="margin-top:0"><button class="btn primary small" onclick="listObjs()">List uploaded files</button><button class="btn ghost small" style="margin-left:0" onclick="listVers()">Show all versions</button></div>
       <div id="out4" class="tablewrap" style="margin-top:14px" aria-live="polite"><p class="hint">Files you upload are listed here. Deleting a file only adds a delete marker, so it can be recovered from the versions list.</p></div>
-    </div>
-
-    <div class="pane" id="p-history" role="tabpanel" aria-labelledby="tab-history" hidden>
-      <div id="out5" class="tablewrap" aria-live="polite"><p class="hint">Your saved analyses appear here. Log in to save your checks.</p></div>
-    </div>
-
-    <div class="pane" id="p-scams" role="tabpanel" aria-labelledby="tab-scams" hidden>
-      <div class="row" style="margin-top:0"><button class="btn primary small" onclick="loadScams()">Load known scams</button></div>
-      <div id="out-scams" class="tablewrap" style="margin-top:14px" aria-live="polite"><p class="hint">Most reported scam domains appear here. Help others by reporting suspicious offers.</p></div>
     </div>
   </div>
 </div></section>
@@ -311,43 +240,12 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cls=l=>(l==='Looks Safe'||l==='Authenticated')?'Safe':(l==='Suspicious'||l==='Unverifiable')?'Susp':'Risk';
 
-let authMode='login';let authToken=localStorage.getItem('jobtruth_token');
-if(authToken)updateAuthUI();
-
-function openAuthModal(mode){authMode=mode;$('auth-modal').style.display='flex';$('auth-btn').textContent=mode==='login'?'Log in':'Sign up';$('auth-email').focus();}
-function closeAuthModal(){$('auth-modal').style.display='none';$('auth-error').style.display='none';}
-function toggleAuthMode(){authMode=authMode==='login'?'signup':'login';$('auth-btn').textContent=authMode==='login'?'Log in':'Sign up';}
-async function authSubmit(){
-  const email=$('auth-email').value,pass=$('auth-pass').value,err=$('auth-error');
-  if(!email||!pass){err.textContent='Email and password required';err.style.display='block';return;}
-  try{
-    const d=await call(`/${authMode==='login'?'login':'register'}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
-    authToken=d.access_token;localStorage.setItem('jobtruth_token',authToken);closeAuthModal();updateAuthUI();$('auth-email').value='';$('auth-pass').value='';
-  }catch(e){err.textContent=e.message;err.style.display='block';}
-}
-function logout(){localStorage.removeItem('jobtruth_token');authToken=null;updateAuthUI();}
-function updateAuthUI(){
-  const nav=$('auth-nav');
-  if(authToken){
-    nav.innerHTML='<a class="cta" href="#" onclick="openTab(\'tab-history\');return false" style="margin-right:8px">My analyses</a><a href="#" onclick="logout();return false" style="color:var(--muted)">Log out</a>';
-  }else{
-    nav.innerHTML='<a class="cta" href="#" onclick="openAuthModal(\'login\');return false">Log in</a>';
-  }
-}
-
 /* tabs */
 const tabs=[...document.querySelectorAll('.tab')];
-function openTab(id){
-  if(id==='tab-history'&&!authToken){openAuthModal('login');return;}
-  tabs.forEach(t=>{const on=t.id===id;t.setAttribute('aria-selected',on);$(t.getAttribute('aria-controls')).hidden=!on;});
-  if(id==='tab-history')loadMyAnalyses();
-}
+function openTab(id){tabs.forEach(t=>{const on=t.id===id;t.setAttribute('aria-selected',on);$(t.getAttribute('aria-controls')).hidden=!on;});}
 tabs.forEach(t=>t.addEventListener('click',()=>openTab(t.id)));
 
 async function call(url,opts){
-  if(!opts)opts={};
-  if(authToken&&!opts.headers)opts.headers={};
-  if(authToken)opts.headers.Authorization=`Bearer ${authToken}`;
   const r=await fetch(url,opts);let d;
   try{d=await r.json();}catch(e){d={};}
   if(!r.ok) throw new Error(typeof d.detail==='string'?d.detail:(r.statusText||'Request failed'));
@@ -419,83 +317,12 @@ async function del(k){
   try{await call('/objects/'+k,{method:'DELETE'});}catch(e){alert(e.message);}
   listObjs();
 }
-async function loadMyAnalyses(){
-  const o=$('out5');
-  try{const d=await call('/my-analyses');
-    o.innerHTML=d.length?`<table><thead><tr><th>Date</th><th>Score</th><th>Result</th><th>Preview</th></tr></thead><tbody>${d.map(x=>
-      `<tr><td>${esc(x.created_at.slice(0,10))}</td><td>${x.trust_score}</td><td>${esc(x.label)}</td><td>${esc(x.text.slice(0,50))}...</td></tr>`).join('')}</tbody></table>`:'<p class="hint">No analyses saved yet. Log in and use Analyze offer to save your checks.</p>';
+async function listVers(){
+  const o=$('out4');
+  try{const d=await call('/versions');
+    o.innerHTML=d.length?`<table><thead><tr><th>File</th><th>Type</th><th>Current</th><th>Version ID</th></tr></thead><tbody>${d.map(x=>
+      `<tr><td>${esc(x.key)}</td><td>${esc(x.type)}</td><td>${x.is_latest?'yes':'no'}</td><td>${esc(x.version_id)}</td></tr>`).join('')}</tbody></table>`:'<p class="hint">No versions yet.</p>';
   }catch(e){fail(o,e);}
 }
 </script>
 </body></html>
-
-async function verifyCompany(){
-  const o=$('out-verify'),name=$('c').value;
-  if(!name){o.innerHTML='<p class="err">Enter a company name</p>';return;}
-  try{const d=await call('/verify-company',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_name:name})});
-    const status=d.is_real?'Verified':'Not verified';
-    const scamWarn=d.scam_reports>0?`<p style="color:var(--stamp);font-weight:600">Warning: This company has ${d.scam_reports} scam report(s)</p>`:
-      `<p style="color:var(--signal);font-weight:600">No scam reports for this company</p>`;
-    o.innerHTML=`<div style="margin-bottom:16px">
-      <div class="verdict ${d.is_real?'Safe':'Risk'}" style="margin-bottom:8px">${esc(status)}</div>
-      <dl class="kv">
-        <dt>Company</dt><dd>${esc(name)}</dd>
-        <dt>Website</dt><dd>${d.website?`<a href="https://${esc(d.website)}" target="_blank">${esc(d.website)}</a>`:'Not found'}</dd>
-        <dt>Founded</dt><dd>${d.founded_year||'Unknown'}</dd>
-        <dt>Reason</dt><dd>${esc(d.reason)}</dd>
-      </dl>
-      ${scamWarn}
-      ${authToken?`<button class="btn ghost small" style="margin-top:10px" onclick="reportScamModal('${esc(name)}')">Report as scam</button>`:''}
-    </div>`;
-  }catch(e){fail(o,e);}
-}
-
-async function loadScams(){
-  const o=$('out-scams');
-  try{const d=await call('/scams');
-    o.innerHTML=d.length?`<table><thead><tr><th>Domain</th><th>Company</th><th>Reports</th></tr></thead><tbody>${d.map(x=>
-      `<tr><td>${esc(x.domain)}</td><td>${esc(x.company_name||'-')}</td><td>${x.count}</td></tr>`).join('')}</tbody></table>`:'<p class="hint">No scams reported yet. Help the community by reporting suspicious offers.</p>';
-  }catch(e){fail(o,e);}
-}
-
-function reportScamModal(domain){
-  const reason=prompt('Why do you think this is a scam? (brief reason)');
-  if(!reason)return;
-  reportScam(domain,reason);
-}
-
-async function reportScam(domain,reason){
-  try{
-    await call('/report-scam',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain,company_name:$('c').value,reason})});
-    alert('Thank you for reporting this scam. It helps protect others.');
-  }catch(e){alert('Error: '+e.message);}
-}
-
-async function checkDomainAge(){
-  const o=$('out-domain'),domain=$('d').value;
-  if(!domain){o.innerHTML='<p class="err">Enter a domain name</p>';return;}
-  try{const d=await call('/check-domain-age',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain})});
-    const flag=d.flag?`<p style="color:var(--stamp);font-weight:600">${esc(d.flag)}</p>`:'<p style="color:var(--signal);font-weight:600">Domain age looks normal</p>';
-    o.innerHTML=`<div style="margin-bottom:16px">
-      <dl class="kv">
-        <dt>Domain</dt><dd>${esc(domain)}</dd>
-        <dt>Age (days)</dt><dd>${d.age_days||'Unknown'}</dd>
-        <dt>Created</dt><dd>${d.created_date?esc(d.created_date.slice(0,10)):'Unknown'}</dd>
-      </dl>
-      ${flag}
-    </div>`;
-  }catch(e){fail(o,e);}
-}
-
-async function batchAnalyze(){
-  const o=$('out-batch'),file=$('csv').files[0];
-  if(!file){o.innerHTML='<p class="err">Choose a CSV file first</p>';return;}
-  if(!authToken){o.innerHTML='<p class="err">Log in to use batch analysis</p>';return;}
-  const fd=new FormData();fd.append('file',file);busy('b-batch',true);
-  try{const d=await call('/batch-analyze',{method:'POST',body:fd});
-    const rows=d.results.map(r=>r.error?`<tr style="opacity:.6"><td>${r.row}</td><td colspan="4">${esc(r.error)}</td></tr>`:`<tr><td>${r.row}</td><td>${r.trust_score}</td><td>${esc(r.label)}</td><td>${r.flags_count}</td><td>${esc(r.preview)}</td></tr>`).join('');
-    o.innerHTML=`<p style="margin-bottom:10px">Analyzed ${d.total} offers</p><table><thead><tr><th>Row</th><th>Score</th><th>Result</th><th>Flags</th><th>Preview</th></tr></thead><tbody>${rows}</tbody></table>`;\n  }catch(e){fail(o,e);}finally{busy('b-batch',false);}
-}
-
-function downloadCSVTemplate(){
-  const csv='offer_text\\nUrgent: You are selected for a work from home job. Earn Rs 5,000 per day. No interview needed. Pay Rs 1,500 registration fee.\\nHi, thank you for applying. Your interview is on 12 November. Details will come from careers@company.com.';\n  const blob=new Blob([csv],{type:'text/csv'});\n  const url=URL.createObjectURL(blob);\n  const a=document.createElement('a');\n  a.href=url;\n  a.download='jobtruth_template.csv';\n  a.click();\n  URL.revokeObjectURL(url);\n}

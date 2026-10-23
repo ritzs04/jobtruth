@@ -2,11 +2,3 @@ fastapi
 uvicorn
 boto3
 python-multipart
-python-jose[cryptography]
-passlib[bcrypt]
-pydantic-settings
-whois
-requests
-csv23
-reportlab
-python-dateutil

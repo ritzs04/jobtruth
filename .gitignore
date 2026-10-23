@@ -6,3 +6,5 @@ venv/
 .venv/
 scripts/.deployed
 *.pem
+uvicorn.log
+*.log
