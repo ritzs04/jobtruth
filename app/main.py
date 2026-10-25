@@ -1,4 +1,4 @@
-import socket
+﻿import socket
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -162,11 +162,7 @@ def verify_company(name: str):
             name_clean = domain
     name_lower = name_clean.lower()
 
-    cached = db.get_cached_company(name_lower)
-    if cached:
-        return {"company_name": name_clean, "is_real": cached["is_real"], "lookalike": None,
-                "note": cached.get("note", "Cached result."),
-                "verify_url": "https://www.mca.gov.in/content/mca/global/en/mca/master-data/MDS.html"}
+    # NOTE: cache is write-only; results are recomputed so lookalike warnings are never lost.
 
     # Strip common suffixes to get the core brand name
     core = re.sub(
@@ -175,6 +171,10 @@ def verify_company(name: str):
         r'|associates?|enterprises?|careers?|recruitment|hiring|hr|staffing)\b',
         '', name_lower
     ).strip()
+
+    # Words scammers append to real brand names (e.g. 'Infosys Careers Pvt Ltd')
+    FAKE_MARKERS = {'career','careers','recruit','recruitment','hiring','hr','job','jobs','placement','staffing'}
+    has_marker = any(w in FAKE_MARKERS for w in re.findall(r'[a-z]+', name_lower))
 
     # Direct set lookup on core (fast, exact)
     matched = core if core in KNOWN_COMPANIES else None
@@ -186,9 +186,13 @@ def verify_company(name: str):
                 matched = word
                 break
 
-    # Lookalike: a known brand word appears in the original name + suspicious suffix
+    # Known brand + fake-recruiter marker => lookalike, not a genuine match
     lookalike = None
-    if not matched:
+    if matched and has_marker:
+        lookalike, matched = matched, None
+
+    # Lookalike: a known brand word appears in the original name + suspicious suffix
+    if not matched and not lookalike:
         for brand in KNOWN_COMPANIES:
             if len(brand) >= 4 and brand in name_lower and any(p in name_lower for p in SUSPICIOUS_PATTERNS):
                 lookalike = brand
@@ -198,7 +202,7 @@ def verify_company(name: str):
         is_real, note = 1, f"Matches known company: {matched.title()}"
     elif lookalike:
         is_real = 0
-        note = (f"⚠️ Looks like a lookalike of '{lookalike.title()}'. "
+        note = (f"\u26a0\ufe0f Looks like a lookalike of '{lookalike.title()}'. "
                 "Scammers add words like 'careers' or 'recruitment' to fake real brands. "
                 "Verify on the official website.")
     else:

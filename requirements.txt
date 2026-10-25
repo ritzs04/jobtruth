@@ -7,3 +7,4 @@ passlib[bcrypt]
 reportlab
 python-whois
 requests
+python-dotenv
