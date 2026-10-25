@@ -151,6 +151,30 @@ def stats():
     return {"scams_detected": analyses, "scams_reported": reports}
 
 
+def _google_search_check(company_name: str) -> bool:
+    """Return True if Google search results mention this as a real company."""
+    import urllib.request, urllib.parse
+    query = urllib.parse.quote_plus(f"{company_name} company official website")
+    url = f"https://www.google.com/search?q={query}&num=5"
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+        })
+        with urllib.request.urlopen(req, timeout=8) as r:
+            html = r.read().decode("utf-8", errors="ignore").lower()
+        name_lower = company_name.lower()
+        # Check if the company name appears in search result snippets
+        words = [w for w in name_lower.split() if len(w) >= 4]
+        matches = sum(1 for w in words if w in html)
+        # Also check for company indicators in results
+        company_signals = ["official", "website", "linkedin", "founded", "headquarters",
+                           "employees", "revenue", "about us", "careers", "contact"]
+        signal_hits = sum(1 for s in company_signals if s in html)
+        return matches >= max(1, len(words) // 2) and signal_hits >= 2
+    except Exception:
+        return False
+
+
 @app.get("/company/verify")
 def verify_company(name: str):
     import re
@@ -206,8 +230,14 @@ def verify_company(name: str):
                 "Scammers add words like 'careers' or 'recruitment' to fake real brands. "
                 "Verify on the official website.")
     else:
-        is_real = 0
-        note = "Not found in the verified company list. Always verify on mca.gov.in before sharing personal details."
+        # Fallback: check Google search results
+        found_on_google = _google_search_check(name_clean)
+        if found_on_google:
+            is_real = 1
+            note = f"Found on Google as a known company. Always verify on mca.gov.in before sharing personal details."
+        else:
+            is_real = 0
+            note = "Not found in verified list or Google search results. This company could not be verified — be cautious."
 
     db.cache_company(name_lower, is_real)
     return {
