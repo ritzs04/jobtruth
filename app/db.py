@@ -1,9 +1,12 @@
 """SQLite database for users and saved analyses."""
+import os
 import sqlite3
 from pathlib import Path
 from datetime import datetime
 
-DB_PATH = Path(__file__).resolve().parent.parent / "jobtruth.db"
+# Allow containers to place SQLite on a writable data directory while keeping
+# the repository-local default for development.
+DB_PATH = Path(os.environ.get("JOBTRUTH_DB_PATH", str(Path(__file__).resolve().parent.parent / "jobtruth.db")))
 
 
 def init_db():
