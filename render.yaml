@@ -10,7 +10,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.12.3
       - key: S3_BUCKET
-        sync: false
+        value: jobtruth-cat2-offers
       - key: AWS_REGION
         value: ap-south-1
       - key: AWS_ACCESS_KEY_ID

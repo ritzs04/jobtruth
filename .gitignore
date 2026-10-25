@@ -1,12 +1,28 @@
+# Secrets — NEVER commit
 .env
+*.pem
+*.key
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
 venv/
 .venv/
-scripts/.deployed
-*.pem
+
+# Local logs
 uvicorn.log
+run.log
+err.log
 *.log
-# Assignment prompt doc with sensitive reference material - never commit
+
+# Local DB (in container it's in /data)
+jobtruth.db
+
+# Sensitive reference doc
 chatgpt_prompt.txt
+t.txt
+
+# Deployment state (local only)
+scripts/deployed.txt
