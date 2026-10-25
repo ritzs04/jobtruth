@@ -15,10 +15,14 @@
   --head:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
   --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
 }
-@media (prefers-color-scheme:dark){:root{
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
   --paper:#0b1220; --surface:#131c2e; --ink:#e8edf6; --muted:#9aa6bb; --line:#26324a;
   --navy:#e8edf6; --signal:#4fd1b8; --signal-bg:#10332f; --amber:#f5b45a; --amber-bg:#3b2a10;
   --stamp:#ff8a80; --stamp-bg:#3d1816; --mark:#6b5a12; --focus:#8fb0ff;}}
+:root[data-theme=dark]{
+  --paper:#0b1220; --surface:#131c2e; --ink:#e8edf6; --muted:#9aa6bb; --line:#26324a;
+  --navy:#e8edf6; --signal:#4fd1b8; --signal-bg:#10332f; --amber:#f5b45a; --amber-bg:#3b2a10;
+  --stamp:#ff8a80; --stamp-bg:#3d1816; --mark:#6b5a12; --focus:#8fb0ff;}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);font:400 1rem/1.6 var(--body)}
@@ -123,7 +127,7 @@ th{color:var(--muted);font-weight:600}
 .sec h3{font:700 1.1rem var(--head);margin:0 0 6px}
 .sec p{margin:0;color:var(--muted)}
 
-footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);font-size:.88rem}
+footer{border-top:1px solid var(--line);}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style></head>
 <body>
@@ -131,9 +135,24 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
   <a class="brand" href="#top" aria-label="JobTruth home">
     <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l11 4v9c0 7-4.6 12.6-11 15C9.6 27.600 5 22 5 15V6z" fill="currentColor"/><path d="M10.500 16l4 4 7.500-8" fill="none" stroke="var(--paper)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     JobTruth</a>
-  <nav><a href="#how">How scoring works</a><a href="#security">Security</a><a class="cta" href="#check" onclick="openTab('tab-offer')">Check an offer</a></nav>
+  <nav><a href="#how">How scoring works</a><a href="#security">Security</a><a class="cta" href="#check" onclick="openTab('tab-offer')">Check an offer</a><button class="btn ghost small" id="theme-btn" onclick="toggleTheme()" style="margin-left:12px;font-size:1.1rem;padding:6px 10px" aria-label="Toggle dark mode">🌙</button><button class="btn ghost small" id="auth-btn" onclick="openAuth()" style="margin-left:8px">Sign in</button></nav>
 </div></header>
 
+<div id="scam-counter" style="background:var(--signal-bg);border-bottom:1px solid var(--line);padding:10px 0;text-align:center;font-size:.92rem;color:var(--signal)"><span id="scam-num">...</span> scam offers detected so far — <b>stay safe</b></div>
+
+<!-- Auth Modal -->
+<div id="auth-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:14px;padding:32px;width:360px;max-width:90vw">
+    <h2 style="margin:0 0 16px;font:700 1.4rem var(--head)" id="auth-title">Sign in</h2>
+    <label class="f" for="auth-email">Email</label>
+    <input id="auth-email" type="email" placeholder="you@example.com" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit;margin-bottom:12px">
+    <label class="f" for="auth-pw">Password</label>
+    <input id="auth-pw" type="password" placeholder="Password" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit;margin-bottom:16px">
+    <div id="auth-err" style="color:var(--stamp);font-size:.88rem;margin-bottom:8px"></div>
+    <button class="btn primary" style="width:100%" onclick="submitAuth()"><span id="auth-btn-label">Sign in</span></button>
+    <p style="text-align:center;margin:12px 0 0;font-size:.88rem">No account? <a href="#" onclick="toggleAuthMode()" id="auth-switch-link">Sign up</a> &nbsp;|&nbsp; <a href="#" onclick="closeAuth()">Cancel</a></p>
+  </div>
+</div>
 <main id="top">
 <div class="hero"><div class="wrap">
   <div>
@@ -157,11 +176,22 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
   <p class="sub">Four tools, one workspace. Nothing you paste is stored. Uploaded letters go to a private, encrypted bucket.</p>
   <div class="panel">
     <div class="tabs" role="tablist" aria-label="Tools">
-      <button class="tab" role="tab" id="tab-offer" aria-selected="true" aria-controls="p-offer">Offer message</button>
-      <button class="tab" role="tab" id="tab-head" aria-selected="false" aria-controls="p-head">Email headers</button>
-      <button class="tab" role="tab" id="tab-up" aria-selected="false" aria-controls="p-up">Offer letter file</button>
-      <button class="tab" role="tab" id="tab-store" aria-selected="false" aria-controls="p-store">Stored files</button>
+      <button class="tab" role="tab" id="tab-offer" aria-selected="true" aria-controls="p-offer" onclick="openTab('tab-offer')">Offer message</button>
+      <button class="tab" role="tab" id="tab-head" aria-selected="false" aria-controls="p-head" onclick="openTab('tab-head')">Email headers</button>
+      <button class="tab" role="tab" id="tab-up" aria-selected="false" aria-controls="p-up" onclick="openTab('tab-up')">Offer letter file</button>
+      <button class="tab" role="tab" id="tab-store" aria-selected="false" aria-controls="p-store" onclick="openTab('tab-store')">Stored files</button>
+      <button class="tab" role="tab" id="tab-company" aria-selected="false" aria-controls="p-company" onclick="openTab('tab-company')">Verify company</button>
     </div>
+
+    <div class="pane" id="p-company" role="tabpanel" aria-labelledby="tab-company" hidden><div class="two">
+      <div>
+        <label class="f" for="cname">Company name</label>
+        <input id="cname" type="text" placeholder="e.g. Zoho, Infosys, TCS or paste a URL" style="width:100%;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit">
+        <div class="row"><button class="btn primary" onclick="verifyCompany()">Verify company</button></div>
+        <p class="hint">Checks against a verified list of known Indian companies. Always cross-check on <a href="https://www.mca.gov.in" target="_blank">mca.gov.in</a>.</p>
+      </div>
+      <div class="result" id="out5" aria-live="polite"><div class="empty"><b>Company check appears here</b>Enter a company name to verify if it is a known registered company.</div></div>
+    </div></div>
 
     <div class="pane" id="p-offer" role="tabpanel" aria-labelledby="tab-offer"><div class="two">
       <div>
@@ -233,7 +263,7 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
 </div></section>
 </main>
 
-<footer><div class="wrap">JobTruth shows risk indicators, not proof. Always verify a company on its official website and never pay money to get a job. Built for the CAT II Cloud Computing project: Render (PaaS), AWS EC2 (IaaS) and Amazon S3.</div></footer>
+<footer></footer>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -243,10 +273,50 @@ const cls=l=>(l==='Looks Safe'||l==='Authenticated')?'Safe':(l==='Suspicious'||l
 /* tabs */
 const tabs=[...document.querySelectorAll('.tab')];
 function openTab(id){tabs.forEach(t=>{const on=t.id===id;t.setAttribute('aria-selected',on);$(t.getAttribute('aria-controls')).hidden=!on;});}
-tabs.forEach(t=>t.addEventListener('click',()=>openTab(t.id)));
+const API=window.location.hostname.includes('vercel.app')?'https://jobtruth.onrender.com':(window.location.origin);
+let authMode='login',authToken=localStorage.getItem('jt_token');
 
+/* dark mode */
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('jt_theme',t);$('theme-btn').textContent=t==='dark'?'☀️':'🌙';}
+function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
+(function(){const saved=localStorage.getItem('jt_theme');if(saved)applyTheme(saved);else if(window.matchMedia('(prefers-color-scheme:dark)').matches)applyTheme('dark');else applyTheme('light');})();
+
+function openAuth(){$('auth-modal').style.display='flex';$('auth-email').focus();}
+function closeAuth(){$('auth-modal').style.display='none';}
+function toggleAuthMode(){authMode=authMode==='login'?'register':'login';$('auth-title').textContent=authMode==='login'?'Sign in':'Sign up';$('auth-btn-label').textContent=authMode==='login'?'Sign in':'Sign up';$('auth-switch-link').textContent=authMode==='login'?'Sign up':'Sign in';$('auth-err').textContent='';}
+function updateAuthBtn(){
+  const b=$('auth-btn');
+  if(authToken){
+    try{const p=JSON.parse(atob(authToken.split('.')[1]));b.textContent='👤 '+p.email.split('@')[0];}catch{b.textContent='Sign out';}
+    b.onclick=()=>{authToken=null;localStorage.removeItem('jt_token');updateAuthBtn();};
+  }else{b.textContent='Sign in';b.onclick=openAuth;}
+}
+async function submitAuth(){
+  const email=$('auth-email').value,pw=$('auth-pw').value;
+  if(!email||!pw){$('auth-err').textContent='Fill in both fields';return;}
+  try{
+    const d=await call(authMode==='login'?'/auth/login':'/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
+    authToken=d.access_token;localStorage.setItem('jt_token',authToken);closeAuth();updateAuthBtn();
+  }catch(e){$('auth-err').textContent=e.message;}
+}
+async function loadStats(){
+  try{const d=await call(API+'/stats');$('scam-num').textContent=d.scams_detected.toLocaleString();}catch(e){$('scam-num').textContent='1,000+';}
+}
+async function verifyCompany(){
+  const o=$('out5'),name=$('cname').value.trim();
+  if(!name){o.innerHTML='<p class="err">Enter a company name first.</p>';return;}
+  try{
+    const d=await call(API+'/company/verify?name='+encodeURIComponent(name));
+    const c=d.is_real?'Safe':d.lookalike?'Susp':'Risk';
+    const icon=d.is_real?'✅':d.lookalike?'⚠️':'❌';
+    o.innerHTML=`<div class="verdict ${c}" style="margin-bottom:10px">${icon} ${d.is_real?'Known company':d.lookalike?'Possible lookalike':'Not in verified list'}</div>
+      <p>${esc(d.note)}</p>
+      <a href="${esc(d.verify_url)}" target="_blank" rel="noopener" class="btn ghost small">Check on MCA India →</a>`;
+  }catch(e){fail(o,e);}
+}
+updateAuthBtn();loadStats();
 async function call(url,opts){
-  const r=await fetch(url,opts);let d;
+  const r=await fetch(url.startsWith('http')?url:API+url,opts);let d;
   try{d=await r.json();}catch(e){d={};}
   if(!r.ok) throw new Error(typeof d.detail==='string'?d.detail:(r.statusText||'Request failed'));
   return d;

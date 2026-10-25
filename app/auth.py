@@ -1,17 +1,16 @@
 """Authentication: JWT tokens, password hashing, and user verification."""
+import os
+import bcrypt
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status, Header
 from pydantic import BaseModel
 
 from app import db
 
-SECRET_KEY = "your-secret-key-change-in-production"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 days
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class Token(BaseModel):
@@ -30,11 +29,11 @@ class UserLogin(BaseModel):
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 def create_access_token(email: str, expires_delta: timedelta = None) -> str:
@@ -46,7 +45,6 @@ def create_access_token(email: str, expires_delta: timedelta = None) -> str:
 
 
 def verify_token(authorization: str = Header(None)) -> str:
-    """Verify JWT token from Authorization header and return email."""
     if not authorization:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
     try:
@@ -63,7 +61,6 @@ def verify_token(authorization: str = Header(None)) -> str:
 
 
 def get_current_user(email: str = Depends(verify_token)):
-    """Get current user from email."""
     user = db.get_user_by_email(email)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")

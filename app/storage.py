@@ -65,8 +65,11 @@ def list_objects() -> list:
         resp = get_s3().list_objects_v2(Bucket=bucket(), Prefix=PREFIX)
     except (ClientError, BotoCoreError) as e:
         raise HTTPException(502, f"Storage error: {e}")
-    return [{"key": o["Key"], "size": o["Size"], "last_modified": o["LastModified"].isoformat()}
-            for o in resp.get("Contents", [])]
+    objects = [{"key": o["Key"], "size": o["Size"], "last_modified": o["LastModified"].isoformat()}
+               for o in resp.get("Contents", [])]
+    if resp.get("IsTruncated"):
+        objects.append({"warning": "Result truncated at 1000 objects"})
+    return objects
 
 
 def list_versions() -> list:
