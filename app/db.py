@@ -106,6 +106,30 @@ def create_user(email: str, password_hash: str):
         return None
 
 
+def ensure_guest_user():
+    """Get or create the anonymous guest user used to persist public analyses.
+
+    The `analyses` table requires a non-null `user_id` (FK to users), so anonymous
+    analyses are recorded under a single shared guest account instead of being
+    dropped. Only the redacted offer text is ever stored, never the raw paste.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id FROM users WHERE email = ?", ("guest@jobtruth.local",))
+    row = c.fetchone()
+    if row:
+        conn.close()
+        return row[0]
+    c.execute(
+        "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
+        ("guest@jobtruth.local", "(guest-no-login)", datetime.utcnow().isoformat())
+    )
+    conn.commit()
+    user_id = c.lastrowid
+    conn.close()
+    return user_id
+
+
 def save_analysis(user_id: int, text: str, trust_score: int, label: str, flags: str):
     """Save an analysis for a user."""
     conn = sqlite3.connect(DB_PATH)

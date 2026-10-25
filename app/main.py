@@ -1,5 +1,6 @@
 ﻿import socket
 import os
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -83,8 +84,17 @@ class HeaderReq(BaseModel):
 @app.post("/analyze")
 def run_analyze(req: TextReq):
     result = analyze(req.text)
-    result["redacted_preview"] = redact(req.text)[:300]
+    redacted = redact(req.text)
+    result["redacted_preview"] = redacted[:300]
     result["served_by"] = socket.gethostname()
+    # Persist a privacy-safe record (only the PII-redacted text) under the shared
+    # guest user so the public scam counter reflects real usage. Never store the
+    # raw paste, and never let analytics break the core analysis.
+    try:
+        db.save_analysis(db.ensure_guest_user(), redacted, result["trust_score"],
+                         result["label"], json.dumps(result["flags"]))
+    except Exception:
+        pass
     return result
 
 
@@ -143,36 +153,86 @@ def stats():
     from app.db import DB_PATH
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM analyses")
-    analyses = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM analyses WHERE label = 'High Risk'")
+    scams_detected = c.fetchone()[0]
     c.execute("SELECT COUNT(*) FROM scam_reports")
     reports = c.fetchone()[0]
     conn.close()
-    return {"scams_detected": analyses, "scams_reported": reports}
+    return {"scams_detected": scams_detected, "scams_reported": reports}
 
 
-def _google_search_check(company_name: str) -> bool:
-    """Return True if Google search results mention this as a real company."""
-    import urllib.request, urllib.parse
-    query = urllib.parse.quote_plus(f"{company_name} company official website")
-    url = f"https://www.google.com/search?q={query}&num=5"
-    try:
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
-        })
-        with urllib.request.urlopen(req, timeout=8) as r:
-            html = r.read().decode("utf-8", errors="ignore").lower()
-        name_lower = company_name.lower()
-        # Check if the company name appears in search result snippets
-        words = [w for w in name_lower.split() if len(w) >= 4]
-        matches = sum(1 for w in words if w in html)
-        # Also check for company indicators in results
-        company_signals = ["official", "website", "linkedin", "founded", "headquarters",
-                           "employees", "revenue", "about us", "careers", "contact"]
-        signal_hits = sum(1 for s in company_signals if s in html)
-        return matches >= max(1, len(words) // 2) and signal_hits >= 2
-    except Exception:
+_COMPANY_SUFFIXES = {
+    "private", "limited", "pvt", "ltd", "llp", "inc", "corp", "corporation",
+    "india", "global", "group", "solutions", "solution", "services", "service",
+    "technologies", "technology", "infotech", "consultancy", "consultant",
+    "consultants", "enterprises", "enterprise", "associates", "associate",
+    "company", "careers", "career", "recruitment", "hiring", "staffing",
+}
+
+
+def _brand_words(name_lower: str) -> list:
+    """Meaningful brand tokens (len>=4, suffixes removed) used to confirm a match."""
+    return [w for w in name_lower.split() if len(w) >= 4 and w not in _COMPANY_SUFFIXES]
+
+
+def _wikipedia_match(name_lower: str) -> bool:
+    """True if Wikipedia has an article whose title contains the company's brand word."""
+    import urllib.request, urllib.parse, json
+    words = _brand_words(name_lower)
+    if not words:
         return False
+    q = urllib.parse.quote_plus(name_lower)
+    url = (f"https://en.wikipedia.org/w/api.php?action=query&list=search"
+           f"&srsearch={q}&srprop=&format=json&srlimit=5")
+    req = urllib.request.Request(url, headers={"User-Agent": "JobTruth/1.0 (company verify)"})
+    with urllib.request.urlopen(req, timeout=8) as r:
+        data = json.loads(r.read().decode("utf-8", errors="ignore"))
+    titles = [h.get("title", "").lower() for h in data.get("query", {}).get("search", [])]
+    return any(any(w in t for w in words) for t in titles)
+
+
+def _company_domain_resolves(name_lower: str) -> bool:
+    """True if a domain derived from the company name resolves in DNS (real website)."""
+    import socket, re
+    slug = re.sub(r"\b(?:" + "|".join(sorted(_COMPANY_SUFFIXES, key=len, reverse=True)) + r")\b", " ", name_lower)
+    slug = re.sub(r"[^a-z0-9]", "", slug)
+    if len(slug) < 4:
+        return False
+    for tld in (".com", ".in", ".co.in", ".org"):
+        try:
+            socket.gethostbyname(slug + tld)
+            return True  # domain is registered and resolves -> a real website exists
+        except (socket.gaierror, Exception):
+            continue
+    return False
+
+
+def _web_search_check(company_name: str) -> bool:
+    """Return True if the company has a verifiable public presence online.
+
+    Search-engine result scraping (Google/DuckDuckGo) is unreliable from a server
+    -- Google serves a consent wall with no result links and DuckDuckGo rate-limits
+    automated requests, so both return empty pages. This instead verifies the
+    company through two stable, no-key, non-throttling sources:
+      1. Wikipedia's public API -- a notable company has an article whose title
+         contains the company's brand word.
+      2. A registered domain derived from the company name -- if <brand>.com/.in
+         resolves in DNS, the company owns a real website.
+    Any network failure fails closed (returns False) so the caller shows
+    "could not be verified -- be cautious".
+    """
+    name_lower = company_name.lower()
+    try:
+        if _wikipedia_match(name_lower):
+            return True
+    except Exception:
+        pass
+    try:
+        if _company_domain_resolves(name_lower):
+            return True
+    except Exception:
+        pass
+    return False
 
 
 @app.get("/company/verify")
@@ -230,14 +290,17 @@ def verify_company(name: str):
                 "Scammers add words like 'careers' or 'recruitment' to fake real brands. "
                 "Verify on the official website.")
     else:
-        # Fallback: check Google search results
-        found_on_google = _google_search_check(name_clean)
-        if found_on_google:
+        # Fallback: verify a real public presence (Wikipedia article or a registered
+        # company domain) -- search-engine scraping is unreliable from a server.
+        found_on_web = _web_search_check(name_clean)
+        if found_on_web:
             is_real = 1
-            note = f"Found on Google as a known company. Always verify on mca.gov.in before sharing personal details."
+            note = ("Found a public presence (Wikipedia article or a registered company "
+                    "website). Always verify on mca.gov.in before sharing personal details.")
         else:
             is_real = 0
-            note = "Not found in verified list or Google search results. This company could not be verified — be cautious."
+            note = ("Not found in the verified company list, Wikipedia or as a registered "
+                    "website. This company could not be verified \u2014 be cautious.")
 
     db.cache_company(name_lower, is_real)
     return {

@@ -3,8 +3,8 @@ uvicorn
 boto3
 python-multipart
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt==5.0.0
 reportlab
 python-whois
 requests
-python-dotenv
+python-dotenv==1.2.4

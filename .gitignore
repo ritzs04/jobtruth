@@ -8,3 +8,5 @@ scripts/.deployed
 *.pem
 uvicorn.log
 *.log
+# Assignment prompt doc with sensitive reference material - never commit
+chatgpt_prompt.txt
