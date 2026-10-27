@@ -129,7 +129,10 @@ th{color:var(--muted);font-weight:600}
 
 footer{border-top:1px solid var(--line);}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
-</style></head>
+</style><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+</head>
 <body>
 <header class="top"><div class="wrap">
   <a class="brand" href="#top" aria-label="JobTruth home">
@@ -222,8 +225,8 @@ footer{border-top:1px solid var(--line);}
     <div class="pane" id="p-up" role="tabpanel" aria-labelledby="tab-up" hidden><div class="two">
       <div>
         <label class="drop" for="f"><b id="fname">Choose an offer letter</b><br><span class="hint">PDF, PNG or JPG, up to 2 MB</span><input type="file" id="f" accept=".pdf,.png,.jpg,.jpeg" onchange="document.getElementById('fname').textContent=this.files[0]?this.files[0].name:'Choose an offer letter'"></label>
-        <div class="row"><button class="btn primary" id="b-up" onclick="upload()">Upload securely</button></div>
-        <p class="hint">The file type is checked from its contents, not its name. It is stored encrypted, with a SHA-256 fingerprint that S3 verifies.</p>
+        <div class="row"><button class="btn primary" id="b-letter-an" onclick="analyzeLetter()">Analyze letter</button><button class="btn ghost small" id="b-up" onclick="upload()" style="margin-left:0">Upload securely</button></div>
+        <p class="hint">Analyze PDF text or OCR text from an image first. Analysis happens in your browser; upload is a separate storage action.</p>
       </div>
       <div class="result" id="out2" aria-live="polite"><div class="empty"><b>Upload receipt appears here</b>You will see the encryption, integrity check and a download link that expires in 5 minutes.</div></div>
     </div></div>
@@ -353,6 +356,35 @@ async function headers(){
     const chips=Object.entries(d.results).map(([k,v])=>`<span class="chip ${v==='pass'?'pos':'neg'}" style="margin-right:6px">${esc(k.toUpperCase())}: ${esc(v)}</span>`).join('');
     o.innerHTML=`<div class="verdict ${c}" style="margin-bottom:8px">${esc(d.verdict)}</div><div style="margin-bottom:10px">${chips}</div>${flagList(d.flags)}<p class="hint" style="margin-bottom:0">${esc(d.disclaimer)}</p>`;
   }catch(e){fail(o,e);}
+}
+
+/* Offer letter extraction and analysis — client-side; files are not uploaded for analysis. */
+async function analyzeLetter(){
+  const o=$('out2'),file=$('f').files[0];
+  if(!file){o.innerHTML='<p class="err">Choose a PDF, PNG or JPG file first.</p>';return;}
+  busy('b-letter-an',true);o.innerHTML='<p class="hint">Reading the document locally…</p>';
+  try{
+    let text='';
+    if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
+      if(!window.pdfjsLib) throw new Error('PDF reader did not load. Refresh the page and try again.');
+      const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise, pages=[];
+      for(let n=1;n<=pdf.numPages;n++){const page=await pdf.getPage(n),content=await page.getTextContent();pages.push(content.items.map(x=>x.str).join(' '));}
+      text=pages.join('\n');
+      if(text.trim().length<40) throw new Error('This looks like a scanned PDF. Please use a searchable PDF or upload a clear PNG/JPG for OCR.');
+    }else{
+      if(!window.Tesseract) throw new Error('Image OCR did not load. Refresh the page and try again.');
+      const result=await Tesseract.recognize(file,'eng');text=result.data.text||'';
+    }
+    if(text.trim().length<20) throw new Error('Not enough readable text found. Try a clearer file or paste the text into Offer message.');
+    const d=await call('/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text.slice(0,20000)})});
+    const c=cls(d.label);
+    o.innerHTML=`<div class="verdict ${c}" style="margin-bottom:8px">${c==='Risk'?'⚠️ HIGH RISK':c==='Susp'?'⚠️ SUSPICIOUS':'🟡 LOWER RISK — VERIFY FIRST'}</div>
+      <div class="gauge">${ring(d.trust_score,c)}<div><b>${esc(d.label)}</b><div class="hint">Trust score: ${d.trust_score}/100 · Risk indicators: ${100-d.trust_score}/100</div></div></div>
+      ${flagList(d.flags)}
+      <div class="note"><b>Extracted text preview</b><br>${esc(text.trim().slice(0,700))}</div>
+      <p class="hint">A score is not proof of authenticity. Verify the employer and recruiter using contact details found independently on the company's official website.</p>`;
+    animateRings(o);
+  }catch(e){fail(o,e);}finally{busy('b-letter-an',false);}
 }
 
 /* upload */
