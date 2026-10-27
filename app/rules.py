@@ -117,15 +117,15 @@ def analyze(text: str) -> dict:
     letter_like = bool(re.search(r"offer letter|letter of appointment|employment offer|appointment letter|dear candidate|dear [a-z]+|joining date|subject:.*offer", low))
     if letter_like:
         checks = [
-            ("MISSING_COMPENSATION", r"salary|compensation|ctc|remuneration|\\bper annum\\b|\\bmonthly pay\\b",
+            ("MISSING_COMPENSATION", r"salary|compensation|ctc|remuneration|\bper annum\b|\bmonthly pay\b",
              "No clear salary or compensation term was found."),
             ("MISSING_START_DATE", r"joining date|start date|commencement date|date of joining",
              "No joining/start date was found."),
             ("MISSING_WORK_LOCATION", r"work location|place of work|office address|workplace|remote position|hybrid",
              "No work location or work arrangement was found."),
-            ("MISSING_ISSUER", r"human resources|\\bhr manager\\b|recruitment team|authorized signatory|\\bsincerely\\b|\\bregards\\b",
+            ("MISSING_ISSUER", r"human resources|\bhr manager\b|recruitment team|authorized signatory|\bsincerely\b|\bregards\b",
              "No clear HR issuer, authorized signatory, or formal sign-off was found."),
-            ("MISSING_COMPANY_CONTACT", r"@[\\w.-]+\\.[a-z]{2,}|\\+?\\d[\\d ()-]{7,}\\d|www\\.",
+            ("MISSING_COMPANY_CONTACT", r"@[\w.-]+\.[a-z]{2,}|\+?\d[\d ()-]{7,}\d|www\.",
              "No company email, phone number, or website was found for independent verification."),
         ]
         for code, pattern, reason in checks:
