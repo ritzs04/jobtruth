@@ -46,8 +46,6 @@ RULES = [
     ("FREE_OR_SUSPICIOUS_DOMAIN", 15,
      r"@[\\w.-]+\\.(example|test|invalid)\\b|https?://[^\\s]+\\.(xyz|top|click|icu|buzz)\\b",
      "Contains a reserved example domain or a commonly abused domain ending; verify the sender independently."),
-    ("NO_INTERVIEW", 15, r"no interview|without (an )?interview|direct (joining|selection)",
-     "Promises a job without an interview process."),
 ]
 
 DISCLAIMER = ("These are risk indicators, not proof. Always verify the company "
