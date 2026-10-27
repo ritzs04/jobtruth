@@ -114,7 +114,7 @@ def analyze(text: str) -> dict:
         seen.add(code)
 
     # Offer-letter completeness checks: missing terms are caution signals, not proof of fraud.
-    letter_like = bool(re.search(r"offer letter|letter of appointment|employment offer|appointment letter|dear candidate|joining date", low))
+    letter_like = bool(re.search(r"offer letter|letter of appointment|employment offer|appointment letter|dear candidate|dear [a-z]+|joining date|subject:.*offer", low))
     if letter_like:
         checks = [
             ("MISSING_COMPENSATION", r"salary|compensation|ctc|remuneration|\\bper annum\\b|\\bmonthly pay\\b",
