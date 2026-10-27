@@ -35,6 +35,19 @@ RULES = [
      r"earn\s+.{0,25}(per day|daily|per week|weekly)"
      r"|(₹|rs\.?|inr)\s?\d{1,3}(,?\d{3})+\s*(per|/)\s*(day|week)",
      "Salary claim looks unrealistic for a fresher."),
+    ("UPFRONT_DOCUMENTS", 20,
+     r"pay.{0,35}(background check|verification|medical|document|certificate|id card) fee|"
+     r"(background check|verification|document processing|id card) fee",
+     "Requests payment for employment paperwork or checks; verify independently before paying."),
+    ("PLACEHOLDER_DETAILS", 25,
+     r"\\[insert [^\\]]+\\]|\\[company name\\]|lorem ipsum|your company here|"
+     r"sample offer letter|not a real job offer|fictional company|demo document",
+     "Contains template placeholders or sample wording, so this text is not a finalized genuine offer."),
+    ("FREE_OR_SUSPICIOUS_DOMAIN", 15,
+     r"@[\\w.-]+\\.(example|test|invalid)\\b|https?://[^\\s]+\\.(xyz|top|click|icu|buzz)\\b",
+     "Contains a reserved example domain or a commonly abused domain ending; verify the sender independently."),
+    ("NO_INTERVIEW", 15, r"no interview|without (an )?interview|direct (joining|selection)",
+     "Promises a job without an interview process."),
 ]
 
 DISCLAIMER = ("These are risk indicators, not proof. Always verify the company "
@@ -101,6 +114,27 @@ def analyze(text: str) -> dict:
         score += impact
         flags.append({"code": code, "impact": impact, "reason": reason})
         seen.add(code)
+
+    # Offer-letter completeness checks: missing terms are caution signals, not proof of fraud.
+    letter_like = bool(re.search(r"offer letter|letter of appointment|employment offer|appointment letter|dear candidate|joining date", low))
+    if letter_like:
+        checks = [
+            ("MISSING_COMPENSATION", r"salary|compensation|ctc|remuneration|\\bper annum\\b|\\bmonthly pay\\b",
+             "No clear salary or compensation term was found."),
+            ("MISSING_START_DATE", r"joining date|start date|commencement date|date of joining",
+             "No joining/start date was found."),
+            ("MISSING_WORK_LOCATION", r"work location|place of work|office address|workplace|remote position|hybrid",
+             "No work location or work arrangement was found."),
+            ("MISSING_ISSUER", r"human resources|\\bhr manager\\b|recruitment team|authorized signatory|\\bsincerely\\b|\\bregards\\b",
+             "No clear HR issuer, authorized signatory, or formal sign-off was found."),
+            ("MISSING_COMPANY_CONTACT", r"@[\\w.-]+\\.[a-z]{2,}|\\+?\\d[\\d ()-]{7,}\\d|www\\.",
+             "No company email, phone number, or website was found for independent verification."),
+        ]
+        for code, pattern, reason in checks:
+            if not re.search(pattern, low) and code not in seen:
+                score -= 8
+                flags.append({"code": code, "impact": -8, "reason": reason})
+                seen.add(code)
 
     score = max(0, min(100, score))
     label = "Looks Safe" if score >= 70 else "Suspicious" if score >= 40 else "High Risk"
