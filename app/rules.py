@@ -40,11 +40,11 @@ RULES = [
      r"(background check|verification|document processing|id card) fee",
      "Requests payment for employment paperwork or checks; verify independently before paying."),
     ("PLACEHOLDER_DETAILS", 25,
-     r"\\[insert [^\\]]+\\]|\\[company name\\]|lorem ipsum|your company here|"
+     r"\[insert [^\]]+\]|\[company name\]|lorem ipsum|your company here|"
      r"sample offer letter|not a real job offer|fictional company|demo document",
      "Contains template placeholders or sample wording, so this text is not a finalized genuine offer."),
     ("FREE_OR_SUSPICIOUS_DOMAIN", 15,
-     r"@[\\w.-]+\\.(example|test|invalid)\\b|https?://[^\\s]+\\.(xyz|top|click|icu|buzz)\\b",
+     r"@[\w.-]+\.(example|test|invalid)\b|https?://[^\s]+\.(xyz|top|click|icu|buzz)\b",
      "Contains a reserved example domain or a commonly abused domain ending; verify the sender independently."),
 ]
 
